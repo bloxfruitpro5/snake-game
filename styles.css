@@ -1,0 +1,75 @@
+:root {
+  color-scheme: dark;
+  --ink: #f3f1ea;
+  --muted: #92958e;
+  --panel: #111513;
+  --panel-2: #171c18;
+  --line: #2a332d;
+  --acid: #d5f76a;
+  --acid-soft: #91aa4c;
+  --orange: #ff8a5c;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: #080a09;
+  color: var(--ink);
+  font-family: "Space Grotesk", system-ui, sans-serif;
+}
+
+button { font: inherit; }
+
+.shell { width: min(100% - 32px, 780px); margin: 0 auto; padding: 52px 0 28px; }
+.game-card { padding: 28px; background: var(--panel); border: 1px solid var(--line); box-shadow: 0 24px 70px #0000005c; }
+.topbar, .score-row, .controls-row { display: flex; align-items: center; justify-content: space-between; }
+.brand { display: flex; align-items: center; gap: 13px; }
+.brand-mark { display: grid; width: 37px; height: 37px; place-items: center; color: #10140f; background: var(--acid); font-size: 19px; }
+.eyebrow, .label, .message-kicker, .footer-note { margin: 0; font-family: "DM Mono", monospace; font-size: 10px; letter-spacing: .16em; color: var(--muted); }
+h1 { margin: 2px 0 0; font-size: 28px; line-height: 1; letter-spacing: -.06em; }
+.status-pill { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); color: var(--muted); font-family: "DM Mono", monospace; font-size: 10px; letter-spacing: .12em; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--acid); box-shadow: 0 0 12px var(--acid); }
+.score-row { align-items: flex-end; padding: 32px 0 17px; }
+.score, .best { margin: 4px 0 0; font-family: "DM Mono", monospace; line-height: .9; }
+.score { color: var(--acid); font-size: clamp(44px, 8vw, 66px); letter-spacing: -.1em; }
+.best { color: var(--orange); font-size: 25px; letter-spacing: -.08em; }
+.best-score { text-align: right; }
+
+.board-wrap { position: relative; overflow: hidden; border: 1px solid var(--line); background: #0d120f; }
+canvas { display: block; width: 100%; height: auto; aspect-ratio: 1; image-rendering: pixelated; }
+.game-message { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; background: #0d120fd9; transition: opacity .2s; }
+.game-message.hidden { opacity: 0; pointer-events: none; }
+.message-kicker { color: var(--acid); }
+.game-message h2 { margin: 13px 0 12px; font-size: clamp(27px, 6vw, 44px); letter-spacing: -.07em; line-height: .98; }
+.message-hint { margin: 0; color: var(--muted); font-family: "DM Mono", monospace; font-size: 12px; }
+
+.controls-row { gap: 16px; padding-top: 19px; }
+.control-copy p:last-child { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+kbd { display: inline-grid; min-width: 22px; height: 22px; margin-left: 4px; place-items: center; color: var(--ink); border: 1px solid #3b463d; background: var(--panel-2); font-family: "DM Mono", monospace; font-size: 11px; }
+.actions { display: flex; gap: 8px; }
+.button { padding: 11px 15px; border: 1px solid var(--line); cursor: pointer; font-size: 12px; font-weight: 600; transition: transform .15s, background .15s; }
+.button:hover { transform: translateY(-2px); }
+.button.secondary { color: var(--ink); background: transparent; }
+.button.primary { color: #10140f; background: var(--acid); border-color: var(--acid); }
+.button.primary span { display: inline-block; margin-left: 8px; font-size: 15px; }
+.footer-note { display: flex; justify-content: center; gap: 10px; padding-top: 18px; font-size: 9px; }
+
+.dpad { display: none; grid-template: repeat(2, 42px) / repeat(3, 42px); gap: 4px; justify-content: center; padding-top: 22px; }
+.dpad-button { border: 1px solid var(--line); color: var(--ink); background: var(--panel-2); cursor: pointer; font-size: 20px; }
+.dpad-button:active { color: #10140f; background: var(--acid); }
+.dpad-button.up { grid-column: 2; }
+.dpad-button.left { grid-column: 1; grid-row: 2; }
+.dpad-button.down { grid-column: 2; grid-row: 2; }
+.dpad-button.right { grid-column: 3; grid-row: 2; }
+
+@media (max-width: 560px) {
+  .shell { width: min(100% - 20px, 780px); padding-top: 20px; }
+  .game-card { padding: 18px; }
+  .controls-row { display: block; }
+  .actions { margin-top: 15px; }
+  .button { flex: 1; }
+  .dpad { display: grid; }
+}

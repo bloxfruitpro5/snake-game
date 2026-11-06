@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snake — Neon Arcade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <section class="game-card" aria-label="Snake game">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">✦</span>
+          <div>
+            <p class="eyebrow">ARCADE / 001</p>
+            <h1>Snake</h1>
+          </div>
+        </div>
+        <div class="status-pill"><span class="status-dot"></span><span id="statusText">READY</span></div>
+      </header>
+
+      <div class="score-row">
+        <div>
+          <p class="label">SCORE</p>
+          <p class="score" id="score">000</p>
+        </div>
+        <div class="best-score">
+          <p class="label">BEST</p>
+          <p class="best" id="best">000</p>
+        </div>
+      </div>
+
+      <div class="board-wrap">
+        <canvas id="gameCanvas" width="600" height="600" aria-label="Snake game board"></canvas>
+        <div class="game-message" id="gameMessage">
+          <p class="message-kicker">READY WHEN YOU ARE</p>
+          <h2>Press a direction<br />to start.</h2>
+          <p class="message-hint">W A S D to move</p>
+        </div>
+      </div>
+
+      <div class="controls-row">
+        <div class="control-copy">
+          <p class="label">CONTROLS</p>
+          <p>Use <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to move</p>
+        </div>
+        <div class="actions">
+          <button class="button secondary" id="pauseButton" type="button">Pause</button>
+          <button class="button primary" id="restartButton" type="button">Restart <span>↗</span></button>
+        </div>
+      </div>
+
+      <div class="dpad" aria-label="Touch controls">
+        <button class="dpad-button up" data-direction="up" aria-label="Move up">↑</button>
+        <button class="dpad-button left" data-direction="left" aria-label="Move left">←</button>
+        <button class="dpad-button down" data-direction="down" aria-label="Move down">↓</button>
+        <button class="dpad-button right" data-direction="right" aria-label="Move right">→</button>
+      </div>
+    </section>
+
+    <footer class="footer-note"><span>KEEP GROWING</span><span>•</span><span>DON'T HIT THE WALL</span></footer>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
