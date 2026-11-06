@@ -39,7 +39,7 @@ h1 { margin: 2px 0 0; font-size: 28px; line-height: 1; letter-spacing: -.06em; }
 .best-score { text-align: right; }
 
 .board-wrap { position: relative; overflow: hidden; border: 1px solid var(--line); background: #0d120f; }
-canvas { display: block; width: 100%; height: auto; aspect-ratio: 1; image-rendering: pixelated; }
+canvas { display: block; width: 100%; height: auto; aspect-ratio: 1; }
 .game-message { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; background: #0d120fd9; transition: opacity .2s; }
 .game-message.hidden { opacity: 0; pointer-events: none; }
 .message-kicker { color: var(--acid); }

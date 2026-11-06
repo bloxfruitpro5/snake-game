@@ -10,19 +10,22 @@ const restartButton = document.querySelector("#restartButton");
 const GRID = 24;
 const CELL = canvas.width / GRID;
 const SPEED = 108;
+const ANIMAL_COUNT = 3;
 const DIRECTIONS = {
   up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 }
 };
 const KEY_DIRECTIONS = { w: "up", a: "left", s: "down", d: "right" };
+const ANIMAL_TYPES = ["rabbit", "mouse", "frog"];
 
 let snake;
-let food;
+let animals;
 let direction;
 let nextDirection;
 let score;
 let best = Number(localStorage.getItem("snake-best") || 0);
 let gameState = "ready";
 let timer;
+let tickCount = 0;
 
 bestEl.textContent = formatScore(best);
 
@@ -33,22 +36,31 @@ function resetGame() {
   direction = { ...DIRECTIONS.right };
   nextDirection = { ...direction };
   score = 0;
+  tickCount = 0;
   scoreEl.textContent = formatScore(score);
-  food = placeFood();
+  animals = ANIMAL_TYPES.map((type, index) => createAnimal(type, index));
   gameState = "ready";
   clearInterval(timer);
   updateUi();
   draw();
 }
 
-function placeFood() {
+function createAnimal(type, index) {
+  const spot = placeAnimal();
+  const angle = [0.6, 2.3, 4.7][index] || Math.random() * Math.PI * 2;
+  return { type, x: spot.x + 0.5, y: spot.y + 0.5, vx: Math.cos(angle) * 0.11, vy: Math.sin(angle) * 0.11, fleeing: false };
+}
+
+function placeAnimal() {
   const openCells = [];
-  for (let y = 0; y < GRID; y += 1) {
-    for (let x = 0; x < GRID; x += 1) {
-      if (!snake.some(segment => segment.x === x && segment.y === y)) openCells.push({ x, y });
+  for (let y = 2; y < GRID - 2; y += 1) {
+    for (let x = 2; x < GRID - 2; x += 1) {
+      const clearOfSnake = snake.every(segment => Math.abs(segment.x - x) + Math.abs(segment.y - y) > 4);
+      const clearOfAnimals = !animals?.some(animal => Math.abs(animal.x - x) + Math.abs(animal.y - y) < 2);
+      if (clearOfSnake && clearOfAnimals) openCells.push({ x, y });
     }
   }
-  return openCells[Math.floor(Math.random() * openCells.length)];
+  return openCells[Math.floor(Math.random() * openCells.length)] || { x: 4, y: 4 };
 }
 
 function startGame() {
@@ -75,17 +87,48 @@ function tick() {
   if (hitWall || hitSelf) return endGame();
 
   snake.unshift(head);
-  if (head.x === food.x && head.y === food.y) {
+  updateAnimals();
+  const caughtIndex = animals.findIndex(animal => Math.hypot(animal.x - head.x - 0.5, animal.y - head.y - 0.5) < 0.8);
+  if (caughtIndex !== -1) {
     score += 10;
     best = Math.max(best, score);
     localStorage.setItem("snake-best", best);
     scoreEl.textContent = formatScore(score);
     bestEl.textContent = formatScore(best);
-    food = placeFood();
+    animals.splice(caughtIndex, 1, createAnimal(ANIMAL_TYPES[(score / 10 + caughtIndex) % ANIMAL_TYPES.length], caughtIndex));
   } else {
     snake.pop();
   }
+  tickCount += 1;
   draw();
+}
+
+function updateAnimals() {
+  const head = snake[0];
+  animals.forEach((animal, index) => {
+    const dx = animal.x - (head.x + 0.5);
+    const dy = animal.y - (head.y + 0.5);
+    const distance = Math.hypot(dx, dy);
+    animal.fleeing = distance < 6.25;
+
+    if (animal.fleeing && distance > 0) {
+      const fleeSpeed = animal.type === "frog" ? 0.16 : 0.13;
+      animal.vx = (dx / distance) * fleeSpeed;
+      animal.vy = (dy / distance) * fleeSpeed;
+    } else if (tickCount % 18 === index * 5) {
+      const angle = Math.atan2(animal.vy, animal.vx) + (Math.random() - 0.5) * 1.8;
+      const wanderSpeed = animal.type === "frog" ? 0.1 : 0.075;
+      animal.vx = Math.cos(angle) * wanderSpeed;
+      animal.vy = Math.sin(angle) * wanderSpeed;
+    }
+
+    animal.x += animal.vx;
+    animal.y += animal.vy;
+    if (animal.x < 1.2 || animal.x > GRID - 1.2) animal.vx *= -1;
+    if (animal.y < 1.2 || animal.y > GRID - 1.2) animal.vy *= -1;
+    animal.x = Math.max(1.2, Math.min(GRID - 1.2, animal.x));
+    animal.y = Math.max(1.2, Math.min(GRID - 1.2, animal.y));
+  });
 }
 
 function endGame() {
@@ -108,7 +151,7 @@ function updateUi() {
   statusText.textContent = labels[gameState];
   pauseButton.textContent = gameState === "paused" ? "Resume" : "Pause";
   if (gameState === "ready") {
-    message.innerHTML = '<p class="message-kicker">READY WHEN YOU ARE</p><h2>Press a direction<br />to start.</h2><p class="message-hint">W A S D to move</p>';
+    message.innerHTML = '<p class="message-kicker">WILDLIFE AWAITS</p><h2>Start the chase<br />with WASD.</h2><p class="message-hint">The animals will run when you get close</p>';
     message.classList.remove("hidden");
   } else if (gameState === "paused") {
     message.innerHTML = '<p class="message-kicker">GAME PAUSED</p><h2>Take a breath.</h2><p class="message-hint">Press Resume or P to continue</p>';
@@ -131,28 +174,101 @@ function draw() {
     ctx.beginPath(); ctx.moveTo(point, 0); ctx.lineTo(point, canvas.height); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(0, point); ctx.lineTo(canvas.width, point); ctx.stroke();
   }
+  animals.forEach(drawAnimal);
+  drawSnake();
+}
 
-  const foodX = food.x * CELL + CELL / 2;
-  const foodY = food.y * CELL + CELL / 2;
-  ctx.fillStyle = "#ff8a5c";
-  ctx.beginPath(); ctx.arc(foodX, foodY, CELL * .27, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "#ffd2b9";
-  ctx.beginPath(); ctx.arc(foodX - CELL * .08, foodY - CELL * .08, CELL * .07, 0, Math.PI * 2); ctx.fill();
-
-  snake.forEach((segment, index) => {
-    const inset = index === 0 ? 2 : 3;
-    ctx.fillStyle = index === 0 ? "#d5f76a" : `hsl(${74 - Math.min(index, 8) * 2} 72% ${62 - Math.min(index, 8) * 2}%)`;
-    ctx.fillRect(segment.x * CELL + inset, segment.y * CELL + inset, CELL - inset * 2, CELL - inset * 2);
+function drawSnake() {
+  snake.slice().reverse().forEach((segment, reverseIndex) => {
+    const index = snake.length - 1 - reverseIndex;
+    const centerX = segment.x * CELL + CELL / 2;
+    const centerY = segment.y * CELL + CELL / 2;
+    const radius = CELL * (index === 0 ? 0.48 : 0.43 - Math.min(index, 7) * 0.008);
+    ctx.fillStyle = index === 0 ? "#365d2f" : index % 2 ? "#587d3b" : "#476d35";
+    ctx.beginPath(); ctx.arc(centerX, centerY, radius, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#789653";
+    ctx.beginPath(); ctx.arc(centerX - CELL * 0.1, centerY - CELL * 0.1, radius * 0.18, 0, Math.PI * 2); ctx.fill();
+    if (index > 0 && index % 2 === 0) {
+      ctx.strokeStyle = "#2f512b";
+      ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.arc(centerX, centerY, radius * 0.68, 0.25, Math.PI - 0.25); ctx.stroke();
+    }
   });
+
   const head = snake[0];
-  ctx.fillStyle = "#10140f";
-  const eyeSize = CELL * .12;
-  const eyeOffset = CELL * .25;
-  const eyeX = direction.x !== 0 ? head.x * CELL + CELL / 2 + direction.x * eyeOffset : head.x * CELL + CELL * .32;
-  const eyeY = direction.y !== 0 ? head.y * CELL + CELL / 2 + direction.y * eyeOffset : head.y * CELL + CELL * .32;
-  ctx.fillRect(eyeX - eyeSize / 2, eyeY - eyeSize / 2, eyeSize, eyeSize);
-  if (direction.x === 0) ctx.fillRect(head.x * CELL + CELL * .68 - eyeSize / 2, eyeY - eyeSize / 2, eyeSize, eyeSize);
-  if (direction.y === 0) ctx.fillRect(eyeX - eyeSize / 2, head.y * CELL + CELL * .68 - eyeSize / 2, eyeSize, eyeSize);
+  const headX = head.x * CELL + CELL / 2;
+  const headY = head.y * CELL + CELL / 2;
+  const angle = Math.atan2(direction.y, direction.x);
+  ctx.save();
+  ctx.translate(headX, headY);
+  ctx.rotate(angle);
+  ctx.fillStyle = "#355d30";
+  ctx.beginPath(); ctx.ellipse(0, 0, CELL * 0.53, CELL * 0.42, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#aec17a";
+  ctx.beginPath(); ctx.ellipse(CELL * 0.08, 0, CELL * 0.29, CELL * 0.24, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#0b110c";
+  ctx.beginPath(); ctx.arc(CELL * 0.22, -CELL * 0.2, CELL * 0.075, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(CELL * 0.22, CELL * 0.2, CELL * 0.075, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#f08b83";
+  ctx.fillRect(CELL * 0.48, -1, CELL * 0.35, 2);
+  ctx.fillRect(CELL * 0.8, -3, CELL * 0.12, 2);
+  ctx.fillRect(CELL * 0.8, 1, CELL * 0.12, 2);
+  ctx.restore();
+}
+
+function drawAnimal(animal) {
+  const x = animal.x * CELL;
+  const y = animal.y * CELL;
+  const angle = Math.atan2(animal.vy, animal.vx);
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  if (animal.type === "rabbit") drawRabbit(animal);
+  if (animal.type === "mouse") drawMouse(animal);
+  if (animal.type === "frog") drawFrog(animal);
+  ctx.restore();
+}
+
+function drawRabbit(animal) {
+  ctx.fillStyle = animal.fleeing ? "#d8c5a5" : "#c6b394";
+  ctx.beginPath(); ctx.ellipse(0, 2, CELL * 0.34, CELL * 0.25, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#d9c8aa";
+  ctx.beginPath(); ctx.ellipse(CELL * 0.25, -CELL * 0.08, CELL * 0.22, CELL * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#b79178";
+  ctx.beginPath(); ctx.ellipse(CELL * 0.26, -CELL * 0.3, CELL * 0.07, CELL * 0.22, -0.15, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(CELL * 0.42, -CELL * 0.28, CELL * 0.07, CELL * 0.22, 0.12, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#242015";
+  ctx.beginPath(); ctx.arc(CELL * 0.34, -CELL * 0.13, CELL * 0.045, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#ead7d0";
+  ctx.beginPath(); ctx.arc(-CELL * 0.29, CELL * 0.02, CELL * 0.13, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawMouse(animal) {
+  ctx.fillStyle = animal.fleeing ? "#a78263" : "#927052";
+  ctx.beginPath(); ctx.ellipse(0, 1, CELL * 0.3, CELL * 0.2, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#b68c70";
+  ctx.beginPath(); ctx.arc(CELL * 0.23, -CELL * 0.02, CELL * 0.16, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#c99b88";
+  ctx.beginPath(); ctx.arc(CELL * 0.18, -CELL * 0.18, CELL * 0.09, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(CELL * 0.32, -CELL * 0.18, CELL * 0.09, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#b68c70"; ctx.lineWidth = 1.4;
+  ctx.beginPath(); ctx.moveTo(-CELL * 0.25, CELL * 0.05); ctx.quadraticCurveTo(-CELL * 0.7, CELL * 0.35, -CELL * 0.48, CELL * 0.5); ctx.stroke();
+  ctx.fillStyle = "#241a15";
+  ctx.beginPath(); ctx.arc(CELL * 0.3, -CELL * 0.04, CELL * 0.035, 0, Math.PI * 2); ctx.fill();
+}
+
+function drawFrog(animal) {
+  ctx.fillStyle = animal.fleeing ? "#5b934e" : "#4b8244";
+  ctx.beginPath(); ctx.ellipse(0, 2, CELL * 0.34, CELL * 0.25, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#78a95d";
+  ctx.beginPath(); ctx.arc(-CELL * 0.16, -CELL * 0.18, CELL * 0.13, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(CELL * 0.18, -CELL * 0.18, CELL * 0.13, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#111a10";
+  ctx.beginPath(); ctx.arc(-CELL * 0.14, -CELL * 0.2, CELL * 0.04, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(CELL * 0.16, -CELL * 0.2, CELL * 0.04, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = "#315c32"; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(-CELL * 0.28, CELL * 0.1); ctx.lineTo(-CELL * 0.5, CELL * 0.3); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(CELL * 0.28, CELL * 0.1); ctx.lineTo(CELL * 0.5, CELL * 0.3); ctx.stroke();
 }
 
 document.addEventListener("keydown", event => {
